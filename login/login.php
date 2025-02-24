@@ -15,19 +15,20 @@ if (isset($_POST['submit']) && !empty($_POST['email']) && !empty($_POST['senha']
     $stmt->execute();
     $result = $stmt->get_result();
 
+    
+
     // Verifica se um registro foi encontrado
     if ($result->num_rows > 0) {
         $usuario = $result->fetch_assoc();
 
         // Verifica se a senha fornecida corresponde à hash armazenada
-        if ($senha === $usuario['senha']) { 
+        if ($senha === $usuario['senha'] or password_verify($senha, $usuario['senha'])) {
             $_SESSION['email'] = $email;
             $_SESSION['senha'] = $senha;
-            $_SESSION['foto_perfil'] = $usuario['foto_perfil'];
             $_SESSION['nome'] = $usuario['nome'];
             $_SESSION['nivel_usuario'] = $usuario['nivel_usuario'];
-            $_SESSION['tema'] = $usuario['tema']; 
-            
+            $_SESSION['tema'] = $usuario['tema'];
+
             // Redireciona para diferentes páginas com base no nível do usuário
             if ($usuario['nivel_usuario'] === 'Administrador') {
                 header("Location: ../admin/admin.php");
@@ -58,4 +59,3 @@ if (isset($_POST['submit']) && !empty($_POST['email']) && !empty($_POST['senha']
     header('Location: login.html');
     exit();
 }
-?>

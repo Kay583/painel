@@ -1,6 +1,6 @@
 <?php
 session_start();
-include_once('./config.php');
+include_once('config.php');
 
 // Verifica se o usuário está logado
 if (!isset($_SESSION['email'])) {
@@ -30,17 +30,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tema'])) {
   exit();
 }
 
-// Conecta ao banco e busca a preferência de tema
-$sql = "SELECT tema FROM usuarios WHERE email = ?";
+// Lida com atualização de configurações
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
+  $new_setting = $_POST['new_setting'];
+  $sql = "UPDATE usuarios SET setting = ? WHERE email = ?";
+  if ($stmt = $conn->prepare($sql)) {
+    $stmt->bind_param("ss", $new_setting, $email);
+    $stmt->execute();
+    $stmt->close();
+    echo "Configurações atualizadas com sucesso!";
+  } else {
+    echo "Erro ao preparar a consulta: " . $conn->error;
+  }
+  exit();
+}
+
+// Busca a foto do banco
+$sql = "SELECT foto_perfil FROM usuarios WHERE email = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $email);
 $stmt->execute();
-$stmt->bind_result($tema);
+$result = $stmt->get_result();
+if ($row = $result->fetch_assoc()) {
+  $foto = $row['foto_perfil'];
+} else {
+  $foto = "../uploads/default.png";
+}
+
+// Lida com atualização de senha
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_password'])) {
+  $new_password = $_POST['new_password'];
+  $sql = "UPDATE usuarios SET senha = ? WHERE email = ?";
+  if ($stmt = $conn->prepare($sql)) {
+    $stmt->bind_param("ss", $new_password, $email);
+    $stmt->execute();
+    $stmt->close();
+    $_SESSION['senha'] = $new_password;
+    echo "Senha atualizada com sucesso!";
+  } else {
+    echo "Erro ao preparar a consulta: " . $conn->error;
+  }
+  exit();
+}
+
+// Conecta ao banco e busca a preferência de tema e status do usuário
+$sql = "SELECT tema, usuario_ativo, foto_perfil FROM usuarios WHERE email = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$stmt->bind_result($tema, $usuario_ativo, $foto_perfil);
 $stmt->fetch();
 $stmt->close();
 
 // Define a preferência de tema na sessão
 $_SESSION['tema'] = $tema ? $tema : 'claro';
+$_SESSION['usuario_ativo'] = $usuario_ativo;
+$_SESSION['foto_perfil'] = $foto_perfil;
 
 $logado = $_SESSION['email'];
 
@@ -51,6 +96,7 @@ $nome = isset($_SESSION['nome']) ? $_SESSION['nome'] : 'Usuário';
 $tema_preferido = $_SESSION['tema'];
 
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -97,7 +143,7 @@ $tema_preferido = $_SESSION['tema'];
           <span class="material-symbols-sharp">receipt_long </span>
           <h3>Produtos</h3>
         </a>
-        <a href="#">
+        <a href="#" id="settings_link">
           <span class="material-symbols-sharp">settings </span>
           <h3>Configurações</h3>
         </a>
@@ -151,7 +197,7 @@ $tema_preferido = $_SESSION['tema'];
           <div class="middle">
 
             <div class="left">
-              <h3>Total de endas</h3>
+              <h3>Total de vendas</h3>
               <h1>$25,024</h1>
             </div>
             <div class="progress">
@@ -264,7 +310,28 @@ $tema_preferido = $_SESSION['tema'];
             <small class="text-muted"></small>
           </div>
           <div class="profile-photo">
-            <img src="" alt="foto de perfil" />
+            <?php if ($foto): ?>
+              <img src="data:image/jpeg;base64,<?php echo base64_encode($foto); ?>" alt="foto de perfil" />
+            <?php else: ?>
+              <img src="../uploads/default.png" alt="foto de perfil" />
+            <?php endif; ?>
+          </div>
+        </div>
+        <div class="settings">
+          <div class="settings-menu" id="settings_menu">
+            <div class="settings-header">
+              <h2 class="config">Configurações</h2>
+              <button id="close_settings" class="close-btn">X</button>
+            </div>
+            <form method="POST" action="update_profile.php" enctype="multipart/form-data">
+              <label for="profile_picture">Mudar Foto de Perfil:</label>
+              <input type="file" id="profile_picture" name="foto_perfil">
+              <label for="new_password">Mudar Senha:</label>
+              <input type="password" id="new_password" name="senha">
+              <input type="submit" name="submit" value="Salvar Alterações">
+            </form>
+            <p>Nível do Usuário: <b><?php echo $_SESSION['nivel_usuario']; ?></b></p>
+            <p>Status: <b><?php echo $_SESSION['usuario_ativo'] ? 'Ativo' : 'Inativo'; ?></b></p>
           </div>
         </div>
       </div>
@@ -315,11 +382,18 @@ $tema_preferido = $_SESSION['tema'];
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    let chart = null;
+
     document.getElementById('analise_link').addEventListener('click', function(event) {
       event.preventDefault();
       document.getElementById('chartContainer').style.display = 'block';
       const ctx = document.getElementById('analiseChart').getContext('2d');
-      new Chart(ctx, {
+
+      if (chart) {
+        chart.destroy();
+      }
+
+      chart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],

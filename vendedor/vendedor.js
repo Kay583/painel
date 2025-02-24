@@ -23,7 +23,7 @@ themeToggler.addEventListener("click", () => {
     : "claro";
 
   // Envia a atualização para o servidor
-  fetch("admin.php", {
+  fetch("vendedor.php", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -35,18 +35,26 @@ themeToggler.addEventListener("click", () => {
     .catch((error) => console.error("Erro ao salvar tema:", error));
 });
 
-document.getElementById("settings_link").addEventListener("click", function (event) {event.preventDefault();
+document
+  .getElementById("settings_link")
+  .addEventListener("click", function (event) {
+    event.preventDefault();
     document.getElementById("settings_menu").classList.toggle("show");
   });
 
-  document.getElementById("settings_link").addEventListener("click", function () {
+document.getElementById("settings_link").addEventListener("click", function () {
+  document.getElementById("settings_menu").classList.toggle("show");
+});
+
+document
+  .getElementById("settings_link")
+  .addEventListener("click", function (event) {
+    event.preventDefault();
     document.getElementById("settings_menu").classList.toggle("show");
   });
 
-  document.getElementById('settings_link').addEventListener('click', function(event) {event.preventDefault();
-    document.getElementById('settings_menu').classList.toggle('show');
-  });
-
-  document.getElementById('close_settings').addEventListener('click', function() {
-    document.getElementById('settings_menu').classList.remove('show');
+document
+  .getElementById("close_settings")
+  .addEventListener("click", function () {
+    document.getElementById("settings_menu").classList.remove("show");
   });
